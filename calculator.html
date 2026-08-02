@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Drafting Calc — Arithmetic &amp; Geometry</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#0A1929;
+    --panel:#0F2A44;
+    --panel-2:#0C233A;
+    --grid:rgba(79,195,247,0.09);
+    --grid-strong:rgba(79,195,247,0.18);
+    --cyan:#4FC3F7;
+    --cyan-dim:#2E7FA3;
+    --amber:#FFB74D;
+    --ink:#E8F1F8;
+    --muted:#7C97AD;
+    --danger:#FF8A65;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/28px 28px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/28px 28px,
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding:24px 16px 60px;
+    display:flex;
+    justify-content:center;
+  }
+  .sheet{
+    width:100%;
+    max-width:760px;
+  }
+  .titleblock{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:1px solid var(--grid-strong);
+    padding-bottom:12px;
+    margin-bottom:18px;
+  }
+  .titleblock h1{
+    font-family:var(--mono);
+    font-size:20px;
+    font-weight:600;
+    letter-spacing:0.5px;
+    margin:0;
+    color:var(--ink);
+  }
+  .titleblock h1 span{color:var(--cyan);}
+  .titleblock .meta{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--muted);
+    text-align:right;
+    line-height:1.6;
+  }
+
+  .tabs{
+    display:flex;
+    gap:2px;
+    margin-bottom:14px;
+  }
+  .tab{
+    flex:1;
+    background:var(--panel-2);
+    border:1px solid var(--grid-strong);
+    border-bottom:none;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    padding:10px 0;
+    cursor:pointer;
+    text-align:center;
+    transition:color .15s, background .15s;
+  }
+  .tab.active{
+    background:var(--panel);
+    color:var(--cyan);
+    border-color:var(--cyan-dim);
+  }
+  .tab:hover:not(.active){ color:var(--ink); }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--grid-strong);
+    padding:20px;
+    display:none;
+  }
+  .panel.active{ display:block; }
+
+  /* ---------- Calculator ---------- */
+  .display{
+    background:var(--panel-2);
+    border:1px solid var(--grid-strong);
+    padding:18px 16px;
+    margin-bottom:14px;
+  }
+  .display .expr{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--muted);
+    min-height:16px;
+    letter-spacing:0.5px;
+    word-break:break-all;
+  }
+  .display .result{
+    font-family:var(--mono);
+    font-size:34px;
+    font-weight:600;
+    color:var(--cyan);
+    text-align:right;
+    margin-top:6px;
+    letter-spacing:0.5px;
+    word-break:break-all;
+  }
+  .keys{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+  }
+  .key{
+    font-family:var(--mono);
+    font-size:16px;
+    padding:16px 0;
+    background:var(--panel-2);
+    border:1px solid var(--grid-strong);
+    color:var(--ink);
+    cursor:pointer;
+    transition:background .12s, border-color .12s, transform .05s;
+  }
+  .key:hover{ border-color:var(--cyan-dim); background:#12354F; }
+  .key:active{ transform:scale(0.96); }
+  .key.op{ color:var(--cyan); }
+  .key.fn{ color:var(--amber); }
+  .key.eq{
+    background:var(--cyan);
+    color:var(--bg);
+    font-weight:700;
+    border-color:var(--cyan);
+    grid-column:span 2;
+  }
+  .key.eq:hover{ background:#6FD3FF; }
+  .key.zero{ grid-column:span 2; }
+
+  /* ---------- Geometry ---------- */
+  .geo-select{
+    display:flex;
+    gap:10px;
+    margin-bottom:16px;
+    flex-wrap:wrap;
+  }
+  select, .field input{
+    font-family:var(--mono);
+    background:var(--panel-2);
+    border:1px solid var(--grid-strong);
+    color:var(--ink);
+    padding:9px 10px;
+    font-size:13px;
+  }
+  select{ flex:1; min-width:180px; cursor:pointer;}
+  select:focus, .field input:focus{ outline:none; border-color:var(--cyan); }
+
+  .geo-body{
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:20px;
+  }
+  @media (max-width:560px){
+    .geo-body{ grid-template-columns:1fr; }
+  }
+
+  .diagram-wrap{
+    background:var(--panel-2);
+    border:1px solid var(--grid-strong);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:12px;
+    min-height:220px;
+  }
+  .diagram-wrap svg{ width:100%; height:auto; max-height:220px; }
+  .diagram-wrap text{
+    font-family:var(--mono);
+    fill:var(--cyan);
+    font-size:11px;
+  }
+  .diagram-wrap .shape-line{
+    fill:none;
+    stroke:var(--ink);
+    stroke-width:1.6;
+  }
+  .diagram-wrap .dim-line{
+    stroke:var(--amber);
+    stroke-width:1;
+    stroke-dasharray:3,2;
+  }
+
+  .fields{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .field label{
+    display:block;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.5px;
+    color:var(--muted);
+    margin-bottom:4px;
+    text-transform:uppercase;
+  }
+  .field input{ width:100%; }
+
+  .readout{
+    margin-top:18px;
+    border-top:1px solid var(--grid-strong);
+    padding-top:14px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .readout .stat{
+    background:var(--panel-2);
+    border:1px solid var(--grid-strong);
+    padding:12px;
+  }
+  .readout .stat .k{
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+  .readout .stat .v{
+    font-family:var(--mono);
+    font-size:20px;
+    color:var(--amber);
+    margin-top:4px;
+    word-break:break-all;
+  }
+
+  .footnote{
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--muted);
+    margin-top:16px;
+    letter-spacing:0.5px;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="titleblock">
+    <h1>DRAFT<span>·</span>CALC</h1>
+    <div class="meta">ARITHMETIC + GEOMETRY<br>REV. 01</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="calc">Calculator</div>
+    <div class="tab" data-tab="geo">Shapes</div>
+  </div>
+
+  <!-- CALCULATOR PANEL -->
+  <div class="panel active" id="panel-calc">
+    <div class="display">
+      <div class="expr" id="expr">&nbsp;</div>
+      <div class="result" id="result">0</div>
+    </div>
+    <div class="keys" id="keys"></div>
+  </div>
+
+  <!-- GEOMETRY PANEL -->
+  <div class="panel" id="panel-geo">
+    <div class="geo-select">
+      <select id="shapeCategory">
+        <option value="2d">2D Shapes — Area / Perimeter</option>
+        <option value="3d">3D Shapes — Volume / Surface Area</option>
+      </select>
+      <select id="shapeType"></select>
+    </div>
+
+    <div class="geo-body">
+      <div class="diagram-wrap" id="diagram"></div>
+      <div class="fields" id="fields"></div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+    <div class="footnote" id="formulaNote"></div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   CALCULATOR
+========================================================= */
+const exprEl = document.getElementById('expr');
+const resultEl = document.getElementById('result');
+const keysEl = document.getElementById('keys');
+
+const keyLayout = [
+  ['C','fn'], ['⌫','fn'], ['%','fn'], ['÷','op'],
+  ['7',''], ['8',''], ['9',''], ['×','op'],
+  ['4',''], ['5',''], ['6',''], ['−','op'],
+  ['1',''], ['2',''], ['3',''], ['+','op'],
+  ['0','zero'], ['.',''], ['=','eq']
+];
+
+let expr = '';
+
+function render(){
+  exprEl.textContent = expr ? expr : '\u00A0';
+  try{
+    if(expr.trim() === ''){ resultEl.textContent = '0'; return; }
+    const safe = expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+    if(/^[0-9+\-*/.%() ]+$/.test(safe)){
+      // eslint-disable-next-line no-eval
+      const val = Function('"use strict";return ('+safe+')')();
+      resultEl.textContent = (val === undefined || Number.isNaN(val) || !isFinite(val)) ? 'Err' : trimNum(val);
+    }
+  }catch(e){
+    // leave last good result showing until '=' or valid expr
+  }
+}
+
+function trimNum(v){
+  if(typeof v !== 'number') return v;
+  let s = v.toString();
+  if(s.length > 14) s = parseFloat(v.toPrecision(12)).toString();
+  return s;
+}
+
+keyLayout.forEach(([label, cls])=>{
+  const btn = document.createElement('button');
+  btn.className = 'key ' + cls;
+  btn.textContent = label;
+  btn.addEventListener('click', ()=> handleKey(label));
+  keysEl.appendChild(btn);
+});
+
+function handleKey(label){
+  if(label === 'C'){ expr=''; resultEl.textContent='0'; render(); return; }
+  if(label === '⌫'){ expr = expr.slice(0,-1); render(); return; }
+  if(label === '='){
+    const safe = expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+    try{
+      const val = Function('"use strict";return ('+safe+')')();
+      resultEl.textContent = (val===undefined||Number.isNaN(val)||!isFinite(val)) ? 'Err' : trimNum(val);
+      expr = resultEl.textContent === 'Err' ? '' : resultEl.textContent;
+    }catch(e){ resultEl.textContent = 'Err'; }
+    exprEl.textContent = expr || '\u00A0';
+    return;
+  }
+  expr += label;
+  render();
+}
+
+document.addEventListener('keydown', (e)=>{
+  if(!document.getElementById('panel-calc').classList.contains('active')) return;
+  const k = e.key;
+  if(/[0-9.]/.test(k)){ handleKey(k); }
+  else if(k==='+'){ handleKey('+'); }
+  else if(k==='-'){ handleKey('−'); }
+  else if(k==='*'){ handleKey('×'); }
+  else if(k==='/'){ e.preventDefault(); handleKey('÷'); }
+  else if(k==='Enter' || k==='='){ handleKey('='); }
+  else if(k==='Backspace'){ handleKey('⌫'); }
+  else if(k==='Escape'){ handleKey('C'); }
+});
+
+render();
+
+/* =========================================================
+   TABS
+========================================================= */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+/* =========================================================
+   GEOMETRY
+========================================================= */
+const PI = Math.PI;
+
+const shapes2d = {
+  circle:{
+    name:'Circle',
+    fields:[{id:'r',label:'Radius (r)'}],
+    calc:(v)=>({ 'Area': PI*v.r*v.r, 'Circumference': 2*PI*v.r }),
+    formula:'Area = πr²   ·   Circumference = 2πr',
+    svg:(v)=>`<svg viewBox="0 0 220 200"><circle class="shape-line" cx="110" cy="100" r="70"/>
+      <line class="dim-line" x1="110" y1="100" x2="180" y2="100"/>
+      <text x="130" y="94">r = ${fmt(v.r)}</text></svg>`
+  },
+  square:{
+    name:'Square',
+    fields:[{id:'s',label:'Side (s)'}],
+    calc:(v)=>({ 'Area': v.s*v.s, 'Perimeter': 4*v.s }),
+    formula:'Area = s²   ·   Perimeter = 4s',
+    svg:(v)=>`<svg viewBox="0 0 220 200"><rect class="shape-line" x="55" y="30" width="120" height="120"/>
+      <text x="105" y="24">s = ${fmt(v.s)}</text></svg>`
+  },
+  rectangle:{
+    name:'Rectangle',
+    fields:[{id:'l',label:'Length (l)'},{id:'w',label:'Width (w)'}],
+    calc:(v)=>({ 'Area': v.l*v.w, 'Perimeter': 2*(v.l+v.w) }),
+    formula:'Area = l × w   ·   Perimeter = 2(l+w)',
+    svg:(v)=>`<svg viewBox="0 0 220 200"><rect class="shape-line" x="35" y="50" width="150" height="90"/>
+      <text x="95" y="44">l = ${fmt(v.l)}</text>
+      <text x="192" y="98" text-anchor="start">w = ${fmt(v.w)}</text></svg>`
+  },
+  triangle:{
+    name:'Triangle',
+    fields:[{id:'b',label:'Base (b)'},{id:'h',label:'Height (h)'},{id:'a1',label:'Side a'},{id:'a2',label:'Side b'},{id:'a3',label:'Side c'}],
+    calc:(v)=>({ 'Area': 0.5*v.b*v.h, 'Perimeter': v.a1+v.a2+v.a3 }),
+    formula:'Area = ½ × b × h   ·   Perimeter = a+b+c',
+    svg:(v)=>`<svg viewBox="0 0 220 200"><polygon class="shape-line" points="110,30 40,160 180,160"/>
+      <line class="dim-line" x1="110" y1="30" x2="110" y2="160"/>
+      <text x="118" y="100">h = ${fmt(v.h)}</text>
+      <text x="95" y="178">b = ${fmt(v.b)}</text></svg>`
+  },
+  parallelogram:{
+    name:'Parallelogram',
+    fields:[{id:'b',label:'Base (b)'},{id:'h',label:'Height (h)'},{id:'a',label:'Side (a)'}],
+    calc:(v)=>({ 'Area': v.b*v.h, 'Perimeter': 2*(v.a+v.b) }),
+    formula:'Area = b × h   ·   Perimeter = 2(a+b)',
+    svg:(v)=>`<svg viewBox="0 0 220 200"><polygon class="shape-line" points="70,50 190,50 150,150 30,150"/>
+      <text x="95" y="44">b = ${fmt(v.b)}</text>
+      <text x="10" y="102">a = ${fmt(v.a)}</text></svg>`
+  },
+  trapezoid:{
+    name:'Trapezoid',
+    fields:[{id:'a',label:'Base a (top)'},{id:'b',label:'Base b (bottom)'},{id:'h',label:'Height (h)'},{id:'c',label:'Side c'},{id:'d',label:'Side d'}],
+    calc:(v)=>({ 'Area': 0.5*(v.a+v.b)*v.h, 'Perimeter': v.a+v.b+v.c+v.d }),
+    formula:'Area = ½(a+b) × h   ·   Perimeter = a+b+c+d',
+    svg:(v)=>`<svg viewBox="0 0 220 200"><polygon class="shape-line" points="80,50 150,50 190,150 30,150"/>
+      <text x="98" y="44">a = ${fmt(v.a)}</text>
+      <text x="90" y="170">b = ${fmt(v.b)}</text></svg>`
+  }
+};
+
+const shapes3d = {
+  cube:{
+    name:'Cube',
+    fields:[{id:'s',label:'Side (s)'}],
+    calc:(v)=>({ 'Volume': v.s**3, 'Surface Area': 6*v.s*v.s }),
+    formula:'Volume = s³   ·   Surface Area = 6s²',
+    svg:(v)=>iso3d('s = '+fmt(v.s))
+  },
+  sphere:{
+    name:'Sphere',
+    fields:[{id:'r',label:'Radius (r)'}],
+    calc:(v)=>({ 'Volume': (4/3)*PI*v.r**3, 'Surface Area': 4*PI*v.r*v.r }),
+    formula:'Volume = (4/3)πr³   ·   Surface Area = 4πr²',
+    svg:(v)=>`<svg viewBox="0 0 220 200"><ellipse class="shape-line" cx="110" cy="100" rx="70" ry="70"/>
+      <ellipse class="shape-line" cx="110" cy="100" rx="70" ry="22" opacity="0.5"/>
+      <text x="115" y="96">r = ${fmt(v.r)}</text></svg>`
+  },
+  cylinder:{
+    name:'Cylinder',
+    fields:[{id:'r',label:'Radius (r)'},{id:'h',label:'Height (h)'}],
+    calc:(v)=>({ 'Volume': PI*v.r*v.r*v.h, 'Surface Area': 2*PI*v.r*v.r + 2*PI*v.r*v.h }),
+    formula:'Volume = πr²h   ·   Surface Area = 2πr² + 2πrh',
+    svg:(v)=>`<svg viewBox="0 0 220 200">
+      <ellipse class="shape-line" cx="110" cy="45" rx="60" ry="18"/>
+      <line class="shape-line" x1="50" y1="45" x2="50" y2="150"/>
+      <line class="shape-line" x1="170" y1="45" x2="170" y2="150"/>
+      <path class="shape-line" d="M50,150 A60,18 0 0 0 170,150"/>
+      <text x="120" y="40">r = ${fmt(v.r)}</text>
+      <text x="176" y="100">h = ${fmt(v.h)}</text></svg>`
+  },
+  cone:{
+    name:'Cone',
+    fields:[{id:'r',label:'Radius (r)'},{id:'h',label:'Height (h)'}],
+    calc:(v)=>{ const l=Math.sqrt(v.r*v.r+v.h*v.h); return { 'Volume': (1/3)*PI*v.r*v.r*v.h, 'Surface Area': PI*v.r*v.r + PI*v.r*l }; },
+    formula:'Volume = (1/3)πr²h   ·   Surface Area = πr² + πr·l  (l = slant height)',
+    svg:(v)=>`<svg viewBox="0 0 220 200">
+      <ellipse class="shape-line" cx="110" cy="150" rx="60" ry="16"/>
+      <line class="shape-line" x1="50" y1="150" x2="110" y2="30"/>
+      <line class="shape-line" x1="170" y1="150" x2="110" y2="30"/>
+      <text x="115" y="80">h = ${fmt(v.h)}</text>
+      <text x="118" y="146">r = ${fmt(v.r)}</text></svg>`
+  },
+  prism:{
+    name:'Rectangular Prism',
+    fields:[{id:'l',label:'Length (l)'},{id:'w',label:'Width (w)'},{id:'h',label:'Height (h)'}],
+    calc:(v)=>({ 'Volume': v.l*v.w*v.h, 'Surface Area': 2*(v.l*v.w+v.l*v.h+v.w*v.h) }),
+    formula:'Volume = l × w × h   ·   Surface Area = 2(lw+lh+wh)',
+    svg:(v)=>iso3d(`l=${fmt(v.l)} w=${fmt(v.w)} h=${fmt(v.h)}`)
+  },
+  pyramid:{
+    name:'Square Pyramid',
+    fields:[{id:'b',label:'Base edge (b)'},{id:'h',label:'Height (h)'}],
+    calc:(v)=>{ const l=Math.sqrt((v.b/2)**2+v.h*v.h); return { 'Volume': (1/3)*v.b*v.b*v.h, 'Surface Area': v.b*v.b + 2*v.b*l }; },
+    formula:'Volume = (1/3)b²h   ·   Surface Area = b² + 2b·l  (l = slant height)',
+    svg:(v)=>`<svg viewBox="0 0 220 200">
+      <polygon class="shape-line" points="45,150 175,150 140,165 10,165"/>
+      <line class="shape-line" x1="110" y1="25" x2="45" y2="150"/>
+      <line class="shape-line" x1="110" y1="25" x2="175" y2="150"/>
+      <line class="shape-line" x1="110" y1="25" x2="10" y2="165"/>
+      <line class="shape-line" x1="110" y1="25" x2="140" y2="165"/>
+      <text x="118" y="90">h = ${fmt(v.h)}</text>
+      <text x="60" y="180">b = ${fmt(v.b)}</text></svg>`
+  },
+  triprism:{
+    name:'Triangular Prism',
+    fields:[{id:'b',label:'Base of triangle (b)'},{id:'th',label:'Height of triangle'},{id:'len',label:'Prism length'},{id:'s1',label:'Triangle side 1'},{id:'s2',label:'Triangle side 2'}],
+    calc:(v)=>{
+      const baseArea = 0.5*v.b*v.th;
+      const perim = v.b+v.s1+v.s2;
+      return { 'Volume': baseArea*v.len, 'Surface Area': 2*baseArea + perim*v.len };
+    },
+    formula:'Volume = (½·b·h) × length   ·   Surface Area = 2×(base area) + (perimeter × length)',
+    svg:(v)=>iso3d(`b=${fmt(v.b)} L=${fmt(v.len)}`)
+  }
+};
+
+function iso3d(label){
+  return `<svg viewBox="0 0 220 200">
+    <polygon class="shape-line" points="60,60 150,60 180,90 90,90" opacity="0.9"/>
+    <polygon class="shape-line" points="60,60 60,140 90,170 90,90" opacity="0.9"/>
+    <polygon class="shape-line" points="90,90 180,90 180,170 90,170" opacity="0.9"/>
+    <text x="55" y="190">${label}</text>
+  </svg>`;
+}
+
+function fmt(n){
+  if(n===undefined || n===null || Number.isNaN(n)) return '—';
+  return Number.isInteger(n) ? n.toString() : n.toString();
+}
+
+const catSel = document.getElementById('shapeCategory');
+const typeSel = document.getElementById('shapeType');
+const fieldsEl = document.getElementById('fields');
+const diagramEl = document.getElementById('diagram');
+const readoutEl = document.getElementById('readout');
+const formulaNoteEl = document.getElementById('formulaNote');
+
+function currentSet(){ return catSel.value === '2d' ? shapes2d : shapes3d; }
+
+function populateTypes(){
+  const set = currentSet();
+  typeSel.innerHTML = '';
+  Object.keys(set).forEach(key=>{
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = set[key].name;
+    typeSel.appendChild(opt);
+  });
+}
+
+function buildFields(){
+  const set = currentSet();
+  const shape = set[typeSel.value];
+  fieldsEl.innerHTML = '';
+  shape.fields.forEach(f=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    wrap.innerHTML = `<label for="f_${f.id}">${f.label}</label><input type="number" step="any" min="0" id="f_${f.id}" value="1">`;
+    fieldsEl.appendChild(wrap);
+  });
+  fieldsEl.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input', updateGeo);
+  });
+  formulaNoteEl.textContent = shape.formula;
+}
+
+function updateGeo(){
+  const set = currentSet();
+  const shape = set[typeSel.value];
+  const values = {};
+  let valid = true;
+  shape.fields.forEach(f=>{
+    const el = document.getElementById('f_'+f.id);
+    const num = parseFloat(el.value);
+    values[f.id] = Number.isFinite(num) ? num : 0;
+    if(!Number.isFinite(num)) valid = false;
+  });
+
+  diagramEl.innerHTML = shape.svg(values);
+
+  const results = valid ? shape.calc(values) : {};
+  readoutEl.innerHTML = '';
+  Object.entries(results).forEach(([k,val])=>{
+    const stat = document.createElement('div');
+    stat.className = 'stat';
+    stat.innerHTML = `<div class="k">${k}</div><div class="v">${fmt(round(val))}</div>`;
+    readoutEl.appendChild(stat);
+  });
+}
+
+function round(n){
+  return Math.round(n*10000)/10000;
+}
+
+catSel.addEventListener('change', ()=>{ populateTypes(); buildFields(); updateGeo(); });
+typeSel.addEventListener('change', ()=>{ buildFields(); updateGeo(); });
+
+populateTypes();
+buildFields();
+updateGeo();
+</script>
+</body>
+</html>
